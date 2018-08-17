@@ -315,3 +315,6 @@ if __name__ == '__main__':
 
     print("Matrix *\n",AA*BB)
     print("nlg *\n",A*B)
+    print("AA**2:\n",AA**2)
+    print("A**2:\n",A**2)
+    
