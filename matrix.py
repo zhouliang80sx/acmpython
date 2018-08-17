@@ -125,7 +125,7 @@ class Matrix:
     # A**k
     assert self.row == self.column, "不是方阵，不能乘方"
     M = copy.deepcopy(self)
-    for i in range(k):
+    for i in range(k-1):
       M = M * self
     return M
 
