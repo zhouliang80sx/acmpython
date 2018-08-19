@@ -4,13 +4,23 @@ Created on Wed Aug 15 12:30:52 2018
 
 @author: user
 
+#矩阵的初等变换 https://wenku.baidu.com/view/3f9585de9f3143323968011ca300a6c30d22f15c.html
+
+#LU矩阵求逆 https://wenku.baidu.com/view/d8cf99300b1c59eef9c7b433.html
+
 inv: https://www.cnblogs.com/xiaoxi666/p/6421228.html
 LU : 
     https://blog.csdn.net/xx_123_1_rj/article/details/39553809
+    
+    矩阵的QR分解（三种方法）Python实现 
     https://www.cnblogs.com/qw12/p/6079244.html
+    
     https://blog.csdn.net/Mr_KkTian/article/details/52723738
     
+    矩阵分解 三角分解(LU分解)
     https://blog.csdn.net/billbliss/article/details/78559289
+    
+    
     https://blog.csdn.net/qq_30981697/article/details/71545519
     
     
@@ -21,11 +31,69 @@ LU :
     
     
     https://blog.csdn.net/xckkcxxck/article/details/78701515
+    
+    LU分解初步
     https://blog.csdn.net/u010945683/article/details/45803141
     
-    
+--------------------------------------------------
+
+     演示 Fabric.js demos · Matrix transformation
+
+    http://fabricjs.com/matrix-transformation
+    http://www.paufler.net/brettcode/paperjs_tutorial/paperJS-012-AffineTransformDemo.html
     
 
+    https://scilab.io/computer-vision-image-transform/
+
+
+    二维图形的矩阵变换（一）——基本概念
+    https://www.cnblogs.com/TianFang/p/3920734.html
+    
+    python Affine transform of an image
+    https://matplotlib.org/gallery/images_contours_and_fields/affine_image.html
+    https://matplotlib.org/api/transformations.html#matplotlib.transforms.Affine2D
+    
+    Understanding the Transformation Matrix in Flash 8
+    http://www.senocular.com/flash/tutorials/transformmatrix/
+
+    Affine and Projective Transformations
+    https://www.graphicsmill.com/docs/gm/affine-and-projective-transformations.htm#DifferenceBetweenProjectiveAndAffine
+
+
+    Understanding Affine Transformations With Matrix Mathematics
+    https://code.tutsplus.com/tutorials/understanding-affine-transformations-with-matrix-mathematics--active-10884
+
+    
+    图形的矩阵变换
+    https://wenku.baidu.com/view/c30daae3fad6195f302ba6fe.html
+  
+    几何变换详解
+    https://www.cnblogs.com/graphics/archive/2012/08/08/2609005.html
+    
+    matlab Matrix Representation of Geometric Transformations
+    https://ww2.mathworks.cn/help/images/matrix-representation-of-geometric-transformations.html
+    
+    图形变换的矩阵方法
+    http://www.docin.com/p-1759892258.html
+    
+    仿射变换
+    https://www.cnblogs.com/ghj1976/p/5199086.html
+    https://homepages.inf.ed.ac.uk/rbf/HIPR2/affine.htm
+    
+    
+    
+    图像处理04-几何变换详解.ppt
+    https://max.book118.com/html/2016/0513/42835199.shtm
+    
+    The Transformation Matrix for 2D Games
+    https://www.alanzucconi.com/2016/02/10/tranfsormation-matrix/
+    
+    数字图像处理笔记与体会（三）——图像的几何变换
+    https://www.cnblogs.com/IClearner/p/6842334.html
+    https://blog.csdn.net/yangtao2076/article/details/51912014
+    
+    
+    
     
 """
 
@@ -52,10 +120,15 @@ class Matrix:
       self.shape=(self.row,self.column)
       
   def __getitem__(self, index):
+      
+    #return self._matrix[index-1]
+  
     if isinstance(index, int):
       return self._matrix[index-1]
     elif isinstance(index, tuple):
       return self._matrix[index[0]-1][index[1]-1]
+  
+    
   # 设置元素m(i,j)的值为s: m[i, j] = s
   def __setitem__(self, index, value):
     if isinstance(index, int):
@@ -293,6 +366,11 @@ if __name__ == '__main__':
 #   
 #   print(m)
 # =============================================================================
+
+
+    
+    
+
     b=[[11,12,13,11],[4,5,6,1]]
     #b=[[5,6],[7,8]]
     a=[[1,2],[3,4]]
