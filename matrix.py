@@ -99,9 +99,8 @@ LU :
 
 import numpy as np
 import numpy.linalg as nlg
-
-
-
+import random    
+import time
 
 
 import copy
@@ -112,22 +111,27 @@ class Matrix:
     self.row = row
     self.column = column
     self._matrix = [[fill]*column for i in range(row)]
-  # 返回元素m(i, j)的值: m[i, j]
+    self.I=None
+    self.dt=None
+    self.rank=None
+    
+  #用array初始化matrix 矩阵 
   def fillwith(self,array):
-      self._matrix=array
+      self._matrix=copy.deepcopy(array)
       self.row=len(array)
       self.column=len(array[0])
       self.shape=(self.row,self.column)
+      self.I=None
+      self.dt=None
+      self.rank=None
       
-  def __getitem__(self, index):
       
-    #return self._matrix[index-1]
-  
+  def __getitem__(self, index):#chongzai []
+       
     if isinstance(index, int):
       return self._matrix[index-1]
     elif isinstance(index, tuple):
-      return self._matrix[index[0]-1][index[1]-1]
-  
+      return self._matrix[index[0]-1][index[1]-1]  
     
   # 设置元素m(i,j)的值为s: m[i, j] = s
   def __setitem__(self, index, value):
@@ -135,37 +139,40 @@ class Matrix:
       self._matrix[index-1] = copy.deepcopy(value)
     elif isinstance(index, tuple):
       self._matrix[index[0]-1][index[1]-1] = value
+    self.dt=None
+    self.I=None
+    self.rank=None
       
-  def __eq__(self, N):
+  def __eq__(self, N): # ==
     '''相等'''
     # A == B
     assert isinstance(N, Matrix), "类型不匹配，不能比较"
     
     if N.shape != self.shape: # 比较维度，可以修改为别的
         return False
-    for i in range(self.row):
-        for j in range(self.column):
-            if self[self.row,self.column]!=N[self.row,self.column]:
+    for i in range(1,self.row+1):
+        for j in range(1,self.column+1):
+            if self[i,j]!=N[i,j]:
                 return False
     return True
 
-  def __add__(self, N):
+  def __add__(self, N):# +
     '''加法'''
     # A + B
     assert N.shape == self.shape, "维度不匹配，不能相加"
-    M = Matrix(self.row, self.column)
-    for r in range(self.row):
-      for c in range(self.column):
+    M = Matrix(self.row, self.column+1)
+    for r in range(1,self.row+1):
+      for c in range(1,self.column+1):
         M[r, c] = self[r, c] + N[r, c]
     return M
 
-  def __sub__(self, N):
+  def __sub__(self, N): # -
     '''减法'''
     # A - B
     assert N.shape == self.shape, "维度不匹配，不能相减"
     M = Matrix(self.row, self.column)
-    for r in range(self.row):
-      for c in range(self.column):
+    for r in range(1,self.row+1):
+      for c in range(1,self.column+1):
         M[r, c] = self[r, c] - N[r, c]
     return M
 
@@ -174,17 +181,18 @@ class Matrix:
     # A * B (或：A * 2.0)
     if isinstance(N, int) or isinstance(N,float):
       M = Matrix(self.row, self.column)
-      for r in range(self.row):
-        for c in range(self.column):
+      for r in range(1,self.row+1):
+        for c in range(1,self.column+1):
           M[r, c] = self[r, c]*N
     else:
       assert N.row == self.column, "维度不匹配，不能相乘"
       M = Matrix(self.row, N.column)
-      for r in range(self.row):
-        for c in range(N.column):
+      for r in range(1,self.row+1):
+        for c in range(1,N.column+1):
           sum = 0
-          for k in range(self.column):
-            sum += self[r, k] * N[k, c]
+          for k in range(1,self.column+1):
+              assert 0<c<=N.column and 0<k<=N.row, "数组访问越界"
+              sum += self[r, k] * N[k, c]
           M[r, c] = sum
     return M
 
@@ -202,12 +210,19 @@ class Matrix:
       M = M * self
     return M
 
-  def rank(self):
+  def getrank(self):
     '''矩阵的秩'''
     pass
+
   def trace(self):
     '''矩阵的迹'''
-    pass
+    N=min(self.column,self.row)
+    tr=1
+    for i in range(1,N+1):
+        tr*=self[i,i]
+        
+    return tr
+
   def adjoint(self):
     '''伴随矩阵'''
     pass
@@ -216,21 +231,27 @@ class Matrix:
   def invert(self):
     '''逆矩阵'''
     assert self.row == self.column, "不是方阵"
+    if self.I!=None:
+        return self.I
+    
     M = Matrix(self.row, self.column*2)
     I = self.identity() # 单位矩阵
-    I.show()#############################
+
+    #I.show()#############################
     # 拼接
     for r in range(1,M.row+1):
       temp = self[r]
       temp.extend(I[r])
       M[r] = copy.deepcopy(temp)
-    M.show()#############################
+    #M.show()#############################
     # 初等行变换
     for r in range(1, M.row+1):
       # 本行首元素(M[r, r])若为 0，则向下交换最近的当前列元素非零的行
+      #print(M)
       if M[r, r] == 0:
         for rr in range(r+1, M.row+1):
           if M[rr, r] != 0:
+            #print('交换两行')  
             M[r],M[rr] = M[rr],M[r] # 交换两行
           break
       assert M[r, r] != 0, '矩阵不可逆'
@@ -238,8 +259,8 @@ class Matrix:
       temp = M[r,r] # 缓存
       for c in range(r, M.column+1):
         M[r, c] /= temp
-        print("M[{0}, {1}] /= {2}".format(r,c,temp))
-      M.show()
+        #print("M[{0}, {1}] /= {2}".format(r,c,temp))
+      #print(M)#show()
       # 本列上、下方的所有元素化为 0
       for rr in range(1, M.row+1):
         temp = M[rr, r] # 缓存
@@ -247,15 +268,52 @@ class Matrix:
           if rr == r:
             continue
           M[rr, c] -= temp * M[r, c]
-          print("M[{0}, {1}] -= {2} * M[{3}, {1}]".format(rr, c, temp,r))
-        M.show()
+          #print("M[{0}, {1}] -= {2} * M[{3}, {1}]".format(rr, c, temp,r))
+        #print(M)#M.show()
     # 截取逆矩阵
     N = Matrix(self.row,self.column)
     for r in range(1,self.row+1):
       N[r] = M[r][self.row:]
     return N
 
+    
 
+  def det(self):
+    if self.dt!=None:
+        return self.dt
+    assert self.row == self.column, "不是方阵"
+    
+    sign=1
+    M = Matrix(self.row, self.column)
+    M=copy.deepcopy(self)
+    
+
+    for r in range(1, M.row+1):
+      # 本行首元素(M[r, r])若为 0，则向下交换最近的当前列元素非零的行
+      #print(M)
+      if M[r, r] == 0:
+        for k in range(r+1, M.row+1):
+          if M[k, r] != 0:
+            #print('主元为0，需要交换两行:')  
+            M[r],M[k] = M[k],M[r] # 交换两行
+            sign*=-1 # 行交换后，det值需要反号
+            #print(M)
+          break
+      
+      if M[r,r]==0: #行初等变换后成上三角阵后，对角线上有0元素， 
+          self.rank=r-1
+          self.dt=0
+          return 0
+               
+      for rr in range(r+1, M.row+1):
+        temp = M[rr, r]/M[r,r] # 缓存
+        for c in range(r, M.column+1):
+          M[rr, c] -= temp * M[r, c]
+          
+    return M.trace()*sign
+
+    
+  
   def jieti(self):
     '''行简化阶梯矩阵'''
     pass
@@ -274,10 +332,10 @@ class Matrix:
     assert self.row >= 3, "至少是3*3阶方阵"
     assert row <= self.row and column <= self.column, "下标超出范围"
     M = Matrix(self.column-1, self.row-1)
-    for r in range(self.row):
+    for r in range(1,self.row+1):
       if r == row:
         continue
-      for c in range(self.column):
+      for c in range(1,self.column+1):
         if c == column:
           continue
         rr = r-1 if r > row else r
@@ -285,17 +343,23 @@ class Matrix:
         M[rr, cc] = self[r, c]
     return M
 
-  def det(self):
+  def det2(self):
     '''计算行列式(determinant)'''
+    if self.dt!=None:
+        return self.dt
+    
     assert self.row == self.column,"非行列式，不能计算"
     if self.shape == (2,2):
       return self[1,1]*self[2,2]-self[1,2]*self[2,1]
     else:
       sum = 0.0
-      for c in range(self.column+1):
-        sum += (-1)**(c+1)*self[1,c]*self.cofactor(1,c).det()
+      for c in range(1,self.column+1):
+        if c%2==1:sign=1
+        else: sign=-1
+        sum += sign*self[1,c]*self.cofactor(1,c).det2()
       return sum
   
+  #@staticmethod
   def zeros(self):
     '''全零矩阵'''
     M = Matrix(self.column, self.row, fill=0.0)
@@ -329,8 +393,8 @@ class Matrix:
     for r in range(self.row):
       rt+="| "  
       for c in range(self.column-1):
-        rt+=str(self[r+1, c+1])+', '
-      rt+=str(self[r+1,self.column])+' |'
+        rt+=str(round(self[r+1, c+1],3))+', '
+      rt+=str(round(self[r+1,self.column],3))+' |'
       rt+='\n'
     
     return rt      
@@ -338,6 +402,13 @@ class Matrix:
   def __str__(self):
     '''打印矩阵'''
     return self.__repr__() 
+
+
+def solve(A,b):
+    return  A.invert()*b
+    #invert(self):
+
+
 
       
 if __name__ == '__main__':
@@ -370,29 +441,80 @@ if __name__ == '__main__':
 
     
     
+# =============================================================================
+# 
+#     b=[[11,12,13,11],[4,5,6,1]]
+#     #b=[[5,6],[7,8]]
+#     a=[[1,2],[3,4]]
+# 
+#     A=Matrix()
+#     A.fillwith(a)
+#     
+#     B=Matrix()
+#     B.fillwith(b)
+#     
+#     AA=np.mat(a)
+#     BB=np.mat(b)
+# 
+# =============================================================================
 
-    b=[[11,12,13,11],[4,5,6,1]]
-    #b=[[5,6],[7,8]]
-    a=[[1,2],[3,4]]
-
+# =============================================================================
+#     print(A)
+#     print(A[2,2])
+# 
+#     print('detA=',A.det())
+#     print('np det AA', nlg.det(AA))
+# 
+#     print("Matrix *\n",AA*BB)
+#     print("nlg *\n",A*B)
+#     print("AA**2:\n",AA**2)
+#     print("A**2:\n",A**2)
+# =============================================================================
+    
+# =============================================================================
+#     N=4
+#     mrand=[[random.randint(0,9) for i in range(N) ] for j in range(N)]
+#   
+#     #mrand=[[0, 2, 0],[3, 4, 5],[4, 8, 3]]
+#     #X = np.random.randint(0, 5, [3, 2, 2])
+#     
+#     
+#     MA=Matrix()
+#     MA.fillwith(mrand)
+#     MB=np.mat(mrand)
+#     print(MA)
+#     
+#     t1=time.time()
+#     inva=np.array(MA.invert()._matrix)
+#     t2=time.time()
+#     print("inva time", t2-t1)
+#     
+#     t1=time.time()
+#     invb=np.array(MB.I)
+#     t2=time.time()
+#     print("numpy invb time", t2-t1)
+#     
+#     print("np nlg det:",nlg.det(MB))
+#     print("matrix class det",MA.det())
+#     print("matrix class det2",MA.det2())
+#     
+#     
+#     ls=[[-2,-2,1],[-4,-8,4],[-1,5,0]]
+#     m1=Matrix()
+#     m1.fillwith(ls)
+#     inv1=m1.invert()
+#     
+#     
+#     m2=np.mat(np.array(ls))
+#     inv2=m2.I
+#     
+# =============================================================================
+    
     A=Matrix()
-    A.fillwith(a)
-    
-    B=Matrix()
-    B.fillwith(b)
-    
-    AA=np.mat(a)
-    BB=np.mat(b)
+    b=Matrix()
+    A.fillwith([[1,1,-1],[2,-3,4],[-3,1,-2]]) 
+    b.fillwith([[-3],[23],[-15]])    
+    print(solve(A,b))
 
 
-    print(A)
-    print(A[2,2])
-
-    print('detA=',A.det())
-    print('np det AA', nlg.det(AA))
-
-    print("Matrix *\n",AA*BB)
-    print("nlg *\n",A*B)
-    print("AA**2:\n",AA**2)
-    print("A**2:\n",A**2)
-    
+  
