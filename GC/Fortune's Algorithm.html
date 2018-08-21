@@ -1,0 +1,384 @@
+
+<!-- saved from url=(0045)https://www.cs.hmc.edu/~mbrubeck/voronoi.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Fortune's Algorithm</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#000000" text="#ffffff" link="#ccccff" vlink="#aaaaff">
+  <div id="banner">
+    <script type="text/javascript"><!--
+    google_ad_client = "pub-7059431698418157";
+    /* 728x90, created 2/13/10 */
+    google_ad_slot = "9422880652";
+    google_ad_width = 728;
+    google_ad_height = 90;
+    //-->
+    </script>
+    <script type="text/javascript" src="./Fortune&#39;s Algorithm_files/show_ads.js"></script>
+  </div>
+  <h1>Fortune's Algorithm in C++</h1>
+  <p>by <a href="http://limpet.net/mbrubeck/">Matt Brubeck</a>
+  </p><p>I wrote this code in 2002 for a Computational Geometry class taught by Greg Levin.  Professor Levin did not grade on style, and portions of the code below are optimized for conciseness rather than clarity.
+
+  </p><p>This visualization is useful for understanding my code:
+  <a href="http://www.diku.dk/hjemmesider/studerende/duff/Fortune/">http://www.diku.dk/hjemmesider/studerende/duff/Fortune/</a>
+
+  </p><p>The visualization shows a line that sweeps along the plane.  (I call this the "sweep line," and use lowercase "L" to refer to its x-coordinate.)  At any given time, there is a set of parabolic arcs defined by the line and each point it has passed.  (I call this set the "parabolic front."  The link above calls it the "beachline.")
+
+  </p><p>Each time a new point is passed, a new parabola is added to the front.  I call this a "site event."  Whenever three parabolas intersect at the same point, this is where their Voronoi cell boundaries will intersect.  I call this a "circle event" because if you draw a circle through all three points, the intersection happens at the center of the circle, and the sweep line will be at the rightmost edge of the circle.  (Turn on "circles" in the visualization applet to see what I mean.)
+
+  </p><p>The key difference between my implementation and the animated visualization above is that I don't calculate what happens at every location of the sweep line.  Instead I jump ahead to the next event (whether it's a circle event or a site event), since those are the only places where new segments of the Voronoi diagram begin or end.  I use a priority queue (sorted by x-coordinate) to efficiently keep track of pending events and process them in order.
+
+  </p><p>For simplicity (because I had a limited time to finish this project) I used a linked list for the parabolic front.  For optimal performance it should really be a binary search tree.
+
+  </p><p>This code is a bit buggy; it produces incorrect output in certain cases.  I have not taken the time to figure out these bugs.
+
+  </p><p>P.S. Here's <a href="http://www.raymondhill.net/voronoi/voronoi.php">another great interactive version</a>, this one in JavaScript.</p>
+
+<h1><a href="https://www.cs.hmc.edu/~mbrubeck/voronoi.cc">voronoi.cc</a></h1>
+
+<pre><font color="#ff80ff">#include </font><font color="#ffa0a0">"voronoi.hh"</font>
+
+priority_queue&lt;point,  vector&lt;point&gt;,  gt&gt; points; <font color="#80a0ff">// site events</font>
+priority_queue&lt;event*, vector&lt;event*&gt;, gt&gt; events; <font color="#80a0ff">// circle events</font>
+
+<font color="#60ff60"><b>int</b></font> main()
+{
+   <font color="#80a0ff">// Read points from input.</font>
+   point p;
+   <font color="#ffff60"><b>while</b></font> (cin &gt;&gt; p.x &gt;&gt; p.y) {
+      points.push(p);
+
+      <font color="#80a0ff">// Keep track of bounding box size.</font>
+      <font color="#ffff60"><b>if</b></font> (p.x &lt; X0) X0 = p.x;
+      <font color="#ffff60"><b>if</b></font> (p.y &lt; Y0) Y0 = p.y;
+      <font color="#ffff60"><b>if</b></font> (p.x &gt; X1) X1 = p.x;
+      <font color="#ffff60"><b>if</b></font> (p.y &gt; Y1) Y1 = p.y;
+   }
+   <font color="#80a0ff">// Add margins to the bounding box.</font>
+   <font color="#60ff60"><b>double</b></font> dx = (X1-X0+<font color="#ffa0a0">1</font>)/<font color="#ffa0a0">5.0</font>, dy = (Y1-Y0+<font color="#ffa0a0">1</font>)/<font color="#ffa0a0">5.0</font>;
+   X0 -= dx;  X1 += dx;  Y0 -= dy;  Y1 += dy;
+
+   <font color="#80a0ff">// Process the queues; select the top element with smaller x coordinate.</font>
+   <font color="#ffff60"><b>while</b></font> (!points.empty())
+      <font color="#ffff60"><b>if</b></font> (!events.empty() &amp;&amp; events.top()-&gt;x &lt;= points.top().x)
+         process_event();
+      <font color="#ffff60"><b>else</b></font>
+         process_point();
+
+   <font color="#80a0ff">// After all points are processed, do the remaining circle events.</font>
+   <font color="#ffff60"><b>while</b></font> (!events.empty())
+      process_event();
+
+   finish_edges(); <font color="#80a0ff">// Clean up dangling edges.</font>
+   print_output(); <font color="#80a0ff">// Output the voronoi diagram.</font>
+}
+
+<font color="#60ff60"><b>void</b></font> process_point()
+{
+   <font color="#80a0ff">// Get the next point from the queue.</font>
+   point p = points.top();
+   points.pop();
+
+   <font color="#80a0ff">// Add a new arc to the parabolic front.</font>
+   front_insert(p);
+}
+
+<font color="#60ff60"><b>void</b></font> process_event()
+{
+   <font color="#80a0ff">// Get the next event from the queue.</font>
+   event *e = events.top();
+   events.pop();
+
+   <font color="#ffff60"><b>if</b></font> (e-&gt;valid) {
+      <font color="#80a0ff">// Start a new edge.</font>
+      seg *s = <font color="#ffff60"><b>new</b></font> seg(e-&gt;p);
+
+      <font color="#80a0ff">// Remove the associated arc from the front.</font>
+      arc *a = e-&gt;a;
+      <font color="#ffff60"><b>if</b></font> (a-&gt;prev) {
+         a-&gt;prev-&gt;next = a-&gt;next;
+         a-&gt;prev-&gt;s1 = s;
+      }
+      <font color="#ffff60"><b>if</b></font> (a-&gt;next) {
+         a-&gt;next-&gt;prev = a-&gt;prev;
+         a-&gt;next-&gt;s0 = s;
+      }
+
+      <font color="#80a0ff">// Finish the edges before and after a.</font>
+      <font color="#ffff60"><b>if</b></font> (a-&gt;s0) a-&gt;s0-&gt;finish(e-&gt;p);
+      <font color="#ffff60"><b>if</b></font> (a-&gt;s1) a-&gt;s1-&gt;finish(e-&gt;p);
+
+      <font color="#80a0ff">// Recheck circle events on either side of p:</font>
+      <font color="#ffff60"><b>if</b></font> (a-&gt;prev) check_circle_event(a-&gt;prev, e-&gt;x);
+      <font color="#ffff60"><b>if</b></font> (a-&gt;next) check_circle_event(a-&gt;next, e-&gt;x);
+   }
+   <font color="#ffff60"><b>delete</b></font> e;
+}
+
+<font color="#60ff60"><b>void</b></font> front_insert(point p)
+{
+   <font color="#ffff60"><b>if</b></font> (!root) {
+      root = <font color="#ffff60"><b>new</b></font> arc(p);
+      <font color="#ffff60"><b>return</b></font>;
+   }
+
+   <font color="#80a0ff">// Find the current arc(s) at height p.y (if there are any).</font>
+   <font color="#ffff60"><b>for</b></font> (arc *i = root; i; i = i-&gt;next) {
+      point z, zz;
+      <font color="#ffff60"><b>if</b></font> (intersect(p,i,&amp;z)) {
+         <font color="#80a0ff">// New parabola intersects arc i.  If necessary, duplicate i.</font>
+         <font color="#ffff60"><b>if</b></font> (i-&gt;next &amp;&amp; !intersect(p,i-&gt;next, &amp;zz)) {
+            i-&gt;next-&gt;prev = <font color="#ffff60"><b>new</b></font> arc(i-&gt;p,i,i-&gt;next);
+            i-&gt;next = i-&gt;next-&gt;prev;
+         }
+         <font color="#ffff60"><b>else</b></font> i-&gt;next = <font color="#ffff60"><b>new</b></font> arc(i-&gt;p,i);
+         i-&gt;next-&gt;s1 = i-&gt;s1;
+
+         <font color="#80a0ff">// Add p between i and i-&gt;next.</font>
+         i-&gt;next-&gt;prev = <font color="#ffff60"><b>new</b></font> arc(p,i,i-&gt;next);
+         i-&gt;next = i-&gt;next-&gt;prev;
+
+         i = i-&gt;next; <font color="#80a0ff">// Now i points to the new arc.</font>
+
+         <font color="#80a0ff">// Add new half-edges connected to i's endpoints.</font>
+         i-&gt;prev-&gt;s1 = i-&gt;s0 = <font color="#ffff60"><b>new</b></font> seg(z);
+         i-&gt;next-&gt;s0 = i-&gt;s1 = <font color="#ffff60"><b>new</b></font> seg(z);
+
+         <font color="#80a0ff">// Check for new circle events around the new arc:</font>
+         check_circle_event(i, p.x);
+         check_circle_event(i-&gt;prev, p.x);
+         check_circle_event(i-&gt;next, p.x);
+
+         <font color="#ffff60"><b>return</b></font>;
+      }
+   }
+
+   <font color="#80a0ff">// Special case: If p never intersects an arc, append it to the list.</font>
+   arc *i;
+   <font color="#ffff60"><b>for</b></font> (i = root; i-&gt;next; i=i-&gt;next) ; <font color="#80a0ff">// Find the last node.</font>
+
+   i-&gt;next = <font color="#ffff60"><b>new</b></font> arc(p,i);
+   <font color="#80a0ff">// Insert segment between p and i</font>
+   point start;
+   start.x = X0;
+   start.y = (i-&gt;next-&gt;p.y + i-&gt;p.y) / <font color="#ffa0a0">2</font>;
+   i-&gt;s1 = i-&gt;next-&gt;s0 = <font color="#ffff60"><b>new</b></font> seg(start);
+}
+
+<font color="#80a0ff">// Look for a new circle event for arc i.</font>
+<font color="#60ff60"><b>void</b></font> check_circle_event(arc *i, <font color="#60ff60"><b>double</b></font> x0)
+{
+   <font color="#80a0ff">// Invalidate any old event.</font>
+   <font color="#ffff60"><b>if</b></font> (i-&gt;e &amp;&amp; i-&gt;e-&gt;x != x0)
+      i-&gt;e-&gt;valid = <font color="#ffa0a0">false</font>;
+   i-&gt;e = <font color="#ffa0a0">NULL</font>;
+
+   <font color="#ffff60"><b>if</b></font> (!i-&gt;prev || !i-&gt;next)
+      <font color="#ffff60"><b>return</b></font>;
+
+   <font color="#60ff60"><b>double</b></font> x;
+   point o;
+
+   <font color="#ffff60"><b>if</b></font> (circle(i-&gt;prev-&gt;p, i-&gt;p, i-&gt;next-&gt;p, &amp;x,&amp;o) &amp;&amp; x &gt; x0) {
+      <font color="#80a0ff">// Create new event.</font>
+      i-&gt;e = <font color="#ffff60"><b>new</b></font> event(x, o, i);
+      events.push(i-&gt;e);
+   }
+}
+
+<font color="#80a0ff">// Find the rightmost point on the circle through a,b,c.</font>
+<font color="#60ff60"><b>bool</b></font> circle(point a, point b, point c, <font color="#60ff60"><b>double</b></font> *x, point *o)
+{
+   <font color="#80a0ff">// Check that bc is a "right turn" from ab.</font>
+   <font color="#ffff60"><b>if</b></font> ((b.x-a.x)*(c.y-a.y) - (c.x-a.x)*(b.y-a.y) &gt; <font color="#ffa0a0">0</font>)
+      <font color="#ffff60"><b>return</b></font> <font color="#ffa0a0">false</font>;
+
+   <font color="#80a0ff">// Algorithm from O'Rourke 2ed p. 189.</font>
+   <font color="#60ff60"><b>double</b></font> A = b.x - a.x,  B = b.y - a.y,
+          C = c.x - a.x,  D = c.y - a.y,
+          E = A*(a.x+b.x) + B*(a.y+b.y),
+          F = C*(a.x+c.x) + D*(a.y+c.y),
+          G = <font color="#ffa0a0">2</font>*(A*(c.y-b.y) - B*(c.x-b.x));
+
+   <font color="#ffff60"><b>if</b></font> (G == <font color="#ffa0a0">0</font>) <font color="#ffff60"><b>return</b></font> <font color="#ffa0a0">false</font>;  <font color="#80a0ff">// Points are co-linear.</font>
+
+   <font color="#80a0ff">// Point o is the center of the circle.</font>
+   o-&gt;x = (D*E-B*F)/G;
+   o-&gt;y = (A*F-C*E)/G;
+
+   <font color="#80a0ff">// o.x plus radius equals max x coordinate.</font>
+   *x = o-&gt;x + sqrt( pow(a.x - o-&gt;x, <font color="#ffa0a0">2</font>) + pow(a.y - o-&gt;y, <font color="#ffa0a0">2</font>) );
+   <font color="#ffff60"><b>return</b></font> <font color="#ffa0a0">true</font>;
+}
+
+<font color="#80a0ff">// Will a new parabola at point p intersect with arc i?</font>
+<font color="#60ff60"><b>bool</b></font> intersect(point p, arc *i, point *res)
+{
+   <font color="#ffff60"><b>if</b></font> (i-&gt;p.x == p.x) <font color="#ffff60"><b>return</b></font> <font color="#ffa0a0">false</font>;
+
+   <font color="#60ff60"><b>double</b></font> a,b;
+   <font color="#ffff60"><b>if</b></font> (i-&gt;prev) <font color="#80a0ff">// Get the intersection of i-&gt;prev, i.</font>
+      a = intersection(i-&gt;prev-&gt;p, i-&gt;p, p.x).y;
+   <font color="#ffff60"><b>if</b></font> (i-&gt;next) <font color="#80a0ff">// Get the intersection of i-&gt;next, i.</font>
+      b = intersection(i-&gt;p, i-&gt;next-&gt;p, p.x).y;
+
+   <font color="#ffff60"><b>if</b></font> ((!i-&gt;prev || a &lt;= p.y) &amp;&amp; (!i-&gt;next || p.y &lt;= b)) {
+      res-&gt;y = p.y;
+
+      <font color="#80a0ff">// Plug it back into the parabola equation.</font>
+      res-&gt;x = (i-&gt;p.x*i-&gt;p.x + (i-&gt;p.y-res-&gt;y)*(i-&gt;p.y-res-&gt;y) - p.x*p.x)
+                / (<font color="#ffa0a0">2</font>*i-&gt;p.x - <font color="#ffa0a0">2</font>*p.x);
+
+      <font color="#ffff60"><b>return</b></font> <font color="#ffa0a0">true</font>;
+   }
+   <font color="#ffff60"><b>return</b></font> <font color="#ffa0a0">false</font>;
+}
+
+<font color="#80a0ff">// Where do two parabolas intersect?</font>
+point intersection(point p0, point p1, <font color="#60ff60"><b>double</b></font> l)
+{
+   point res, p = p0;
+
+   <font color="#ffff60"><b>if</b></font> (p0.x == p1.x)
+      res.y = (p0.y + p1.y) / <font color="#ffa0a0">2</font>;
+   <font color="#ffff60"><b>else</b></font> <font color="#ffff60"><b>if</b></font> (p1.x == l)
+      res.y = p1.y;
+   <font color="#ffff60"><b>else</b></font> <font color="#ffff60"><b>if</b></font> (p0.x == l) {
+      res.y = p0.y;
+      p = p1;
+   } <font color="#ffff60"><b>else</b></font> {
+      <font color="#80a0ff">// Use the quadratic formula.</font>
+      <font color="#60ff60"><b>double</b></font> z0 = <font color="#ffa0a0">2</font>*(p0.x - l);
+      <font color="#60ff60"><b>double</b></font> z1 = <font color="#ffa0a0">2</font>*(p1.x - l);
+
+      <font color="#60ff60"><b>double</b></font> a = <font color="#ffa0a0">1</font>/z0 - <font color="#ffa0a0">1</font>/z1;
+      <font color="#60ff60"><b>double</b></font> b = -<font color="#ffa0a0">2</font>*(p0.y/z0 - p1.y/z1);
+      <font color="#60ff60"><b>double</b></font> c = (p0.y*p0.y + p0.x*p0.x - l*l)/z0
+               - (p1.y*p1.y + p1.x*p1.x - l*l)/z1;
+
+      res.y = ( -b - sqrt(b*b - <font color="#ffa0a0">4</font>*a*c) ) / (<font color="#ffa0a0">2</font>*a);
+   }
+   <font color="#80a0ff">// Plug back into one of the parabola equations.</font>
+   res.x = (p.x*p.x + (p.y-res.y)*(p.y-res.y) - l*l)/(<font color="#ffa0a0">2</font>*p.x-<font color="#ffa0a0">2</font>*l);
+   <font color="#ffff60"><b>return</b></font> res;
+}
+
+<font color="#60ff60"><b>void</b></font> finish_edges()
+{
+   <font color="#80a0ff">// Advance the sweep line so no parabolas can cross the bounding box.</font>
+   <font color="#60ff60"><b>double</b></font> l = X1 + (X1-X0) + (Y1-Y0);
+
+   <font color="#80a0ff">// Extend each remaining segment to the new parabola intersections.</font>
+   <font color="#ffff60"><b>for</b></font> (arc *i = root; i-&gt;next; i = i-&gt;next)
+      <font color="#ffff60"><b>if</b></font> (i-&gt;s1)
+         i-&gt;s1-&gt;finish(intersection(i-&gt;p, i-&gt;next-&gt;p, l*<font color="#ffa0a0">2</font>));
+}
+
+<font color="#60ff60"><b>void</b></font> print_output()
+{
+   <font color="#80a0ff">// Bounding box coordinates.</font>
+   cout &lt;&lt; X0 &lt;&lt; <font color="#ffa0a0">" "</font>&lt;&lt; X1 &lt;&lt; <font color="#ffa0a0">" "</font> &lt;&lt; Y0 &lt;&lt; <font color="#ffa0a0">" "</font> &lt;&lt; Y1 &lt;&lt; endl;
+
+   <font color="#80a0ff">// Each output segment in four-column format.</font>
+   vector&lt;seg*&gt;::iterator i;
+   <font color="#ffff60"><b>for</b></font> (i = output.begin(); i != output.end(); i++) {
+      point p0 = (*i)-&gt;start;
+      point p1 = (*i)-&gt;end;
+      cout &lt;&lt; p0.x &lt;&lt; <font color="#ffa0a0">" "</font> &lt;&lt; p0.y &lt;&lt; <font color="#ffa0a0">" "</font> &lt;&lt; p1.x &lt;&lt; <font color="#ffa0a0">" "</font> &lt;&lt; p1.y &lt;&lt; endl;
+   }
+}
+</pre>
+
+<hr>
+
+<h1><a href="https://www.cs.hmc.edu/~mbrubeck/voronoi.hh">voronoi.hh</a></h1>
+<pre><font color="#ff80ff">#include </font><font color="#ffa0a0">&lt;iostream&gt;</font>
+<font color="#ff80ff">#include </font><font color="#ffa0a0">&lt;queue&gt;</font>
+<font color="#ff80ff">#include </font><font color="#ffa0a0">&lt;set&gt;</font>
+<font color="#ff80ff">#include </font><font color="#ffa0a0">&lt;math.h&gt;</font>
+
+<font color="#ffff60"><b>using</b></font> <font color="#60ff60"><b>namespace</b></font> std;
+
+<font color="#80a0ff">// Notation for working with points</font>
+<font color="#60ff60"><b>typedef</b></font> pair&lt;<font color="#60ff60"><b>double</b></font>, <font color="#60ff60"><b>double</b></font>&gt; point;
+<font color="#ff80ff">#define x first</font>
+<font color="#ff80ff">#define y second</font>
+
+<font color="#80a0ff">// Arc, event, and segment datatypes</font>
+<font color="#60ff60"><b>struct</b></font> arc;
+<font color="#60ff60"><b>struct</b></font> seg;
+
+<font color="#60ff60"><b>struct</b></font> event {
+   <font color="#60ff60"><b>double</b></font> x;
+   point p;
+   arc *a;
+   <font color="#60ff60"><b>bool</b></font> valid;
+
+   event(<font color="#60ff60"><b>double</b></font> xx, point pp, arc *aa)
+      : x(xx), p(pp), a(aa), valid(<font color="#ffa0a0">true</font>) {}
+};
+
+<font color="#60ff60"><b>struct</b></font> arc {
+   point p;
+   arc *prev, *next;
+   event *e;
+
+   seg *s0, *s1;
+
+   arc(point pp, arc *a=<font color="#ffa0a0">0</font>, arc *b=<font color="#ffa0a0">0</font>)
+    : p(pp), prev(a), next(b), e(<font color="#ffa0a0">0</font>), s0(<font color="#ffa0a0">0</font>), s1(<font color="#ffa0a0">0</font>) {}
+};
+
+vector&lt;seg*&gt; output;  <font color="#80a0ff">// Array of output segments.</font>
+
+<font color="#60ff60"><b>struct</b></font> seg {
+   point start, end;
+   <font color="#60ff60"><b>bool</b></font> done;
+
+   seg(point p)
+      : start(p), end(<font color="#ffa0a0">0</font>,<font color="#ffa0a0">0</font>), done(<font color="#ffa0a0">false</font>)
+   { output.push_back(<font color="#ffff60"><b>this</b></font>); }
+
+   <font color="#80a0ff">// Set the end point and mark as "done."</font>
+   <font color="#60ff60"><b>void</b></font> finish(point p) { <font color="#ffff60"><b>if</b></font> (done) <font color="#ffff60"><b>return</b></font>; end = p; done = <font color="#ffa0a0">true</font>; }
+};
+
+arc *root = <font color="#ffa0a0">0</font>; <font color="#80a0ff">// First item in the parabolic front linked list.</font>
+
+<font color="#80a0ff">// Function declarations</font>
+<font color="#60ff60"><b>void</b></font> process_point();
+<font color="#60ff60"><b>void</b></font> process_event();
+<font color="#60ff60"><b>void</b></font> front_insert(point  p);
+
+<font color="#60ff60"><b>bool</b></font> circle(point a, point b, point c, <font color="#60ff60"><b>double</b></font> *x, point *o);
+<font color="#60ff60"><b>void</b></font> check_circle_event(arc *i, <font color="#60ff60"><b>double</b></font> x0);
+
+<font color="#60ff60"><b>bool</b></font> intersect(point p, arc *i, point *result = <font color="#ffa0a0">0</font>);
+point intersection(point p0, point p1, <font color="#60ff60"><b>double</b></font> l);
+
+<font color="#60ff60"><b>void</b></font> finish_edges();
+<font color="#60ff60"><b>void</b></font> print_output();
+
+<font color="#80a0ff">// "Greater than" comparison, for reverse sorting in priority queue.</font>
+<font color="#60ff60"><b>struct</b></font> gt {
+   <font color="#60ff60"><b>bool</b></font> <font color="#ffff60"><b>operator</b></font>()(point a, point b) {<font color="#ffff60"><b>return</b></font> a.x==b.x ? a.y&gt;b.y : a.x&gt;b.x;}
+   <font color="#60ff60"><b>bool</b></font> <font color="#ffff60"><b>operator</b></font>()(event *a, event *b) {<font color="#ffff60"><b>return</b></font> a-&gt;x&gt;b-&gt;x;}
+};
+
+<font color="#80a0ff">// Bounding box coordinates.</font>
+<font color="#60ff60"><b>double</b></font> X0 = <font color="#ffa0a0">0</font>, X1 = <font color="#ffa0a0">0</font>, Y0 = <font color="#ffa0a0">0</font>, Y1 = <font color="#ffa0a0">0</font>;
+</pre>
+<script type="text/javascript">
+  var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+  document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script><script src="./Fortune&#39;s Algorithm_files/ga.js" type="text/javascript"></script>
+<script type="text/javascript">
+  try {
+  var pageTracker = _gat._getTracker("UA-8564036-2");
+  pageTracker._trackPageview();
+  } catch(err) {}
+</script>
+
+
+</body></html>
