@@ -44,10 +44,13 @@ https://www.jianshu.com/p/7ffba3910997
 
 '''
 
-A=[(3,5),(5,10),(10,8),(8,2),(2,4)]
+
 def matrixmul(A):
     n=len(A)
     M=[[0 for i in range(n)] for j in range(n)]
+    #M[i][j]:Ai.....Aj, 最少乘法次数
+    K=[[-1 for i in range(n)] for j in range(n)]
+    #k[j][j]:(Ai...Ak)||(Ak+1..Aj), 的最少乘法次数的划分位置
 
     for step in range(1,n):
         for i in range(0,n):
@@ -58,6 +61,7 @@ def matrixmul(A):
                 M[i][j]=M[i][k]+M[k+1][j]+A[i][0]*A[k][1]*A[j][1]
                 if M[i][j]<minValue:
                     minValue=M[i][j]
+                    K[i][j]=k
             M[i][j]=minValue # 取k种划分的最小值
            
         print('\n','step=',step)
@@ -66,11 +70,25 @@ def matrixmul(A):
                 print('{:8d}'.format(M[i][j]),end=',')
             print()
             
-    return M
+    return M,K
+    
+def printrt(i,j): #print result 
+    if i==j:
+        print('A[',i,']',sep='',end='')
+        return
+    
+    split=K[i][j]
+    print('(',end='')
+    printrt(i,split)
+    #.....
+    printrt(split+1,j)
+    print(')',end='')    
+    
     
      
-
-M=matrixmul(A)    
+A=[(3,5),(5,10),(10,8),(8,2),(2,4)]
+M,K=matrixmul(A)    
+printrt(0,len(A)-1)
 
 
 
