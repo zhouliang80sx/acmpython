@@ -39,7 +39,7 @@ LU :
 
      演示 Fabric.js demos · Matrix transformation
 
-    http://fabricjs.com/matrix-transformation
+    *** http://fabricjs.com/matrix-transformation
     http://www.paufler.net/brettcode/paperjs_tutorial/paperJS-012-AffineTransformDemo.html
     
 
@@ -57,7 +57,7 @@ LU :
     http://www.senocular.com/flash/tutorials/transformmatrix/
 
     Affine and Projective Transformations
-    https://www.graphicsmill.com/docs/gm/affine-and-projective-transformations.htm#DifferenceBetweenProjectiveAndAffine
+    * https://www.graphicsmill.com/docs/gm/affine-and-projective-transformations.htm#DifferenceBetweenProjectiveAndAffine
 
 
     Understanding Affine Transformations With Matrix Mathematics
@@ -65,25 +65,25 @@ LU :
 
     
     图形的矩阵变换
-    https://wenku.baidu.com/view/c30daae3fad6195f302ba6fe.html
+    ** https://wenku.baidu.com/view/c30daae3fad6195f302ba6fe.html
   
-    几何变换详解
-    https://www.cnblogs.com/graphics/archive/2012/08/08/2609005.html
+    几何变换详解(f(x,y))
+    ** https://www.cnblogs.com/graphics/archive/2012/08/08/2609005.html
     
     matlab Matrix Representation of Geometric Transformations
     https://ww2.mathworks.cn/help/images/matrix-representation-of-geometric-transformations.html
     
     图形变换的矩阵方法
-    http://www.docin.com/p-1759892258.html
+    *** http://www.docin.com/p-1759892258.html
     
     仿射变换
-    https://www.cnblogs.com/ghj1976/p/5199086.html
+    * https://www.cnblogs.com/ghj1976/p/5199086.html
     https://homepages.inf.ed.ac.uk/rbf/HIPR2/affine.htm
-    
+     
     
     
     图像处理04-几何变换详解.ppt
-    https://max.book118.com/html/2016/0513/42835199.shtm
+    ** https://max.book118.com/html/2016/0513/42835199.shtm
     
     The Transformation Matrix for 2D Games
     https://www.alanzucconi.com/2016/02/10/tranfsormation-matrix/
