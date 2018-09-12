@@ -18,8 +18,10 @@ class MainWindow:
 
         self.w = tk.Canvas(self.frmMain, width=500, height=500)
         self.w.config(background='white')
-        self.w.bind('<Double-1>', self.onDoubleClick)
+        self.w.bind('<Button-1>', self.onDoubleClick)
         self.w.pack()       
+        
+    
 
         self.frmButton = tk.Frame(self.master)
         self.frmButton.pack()
@@ -45,7 +47,10 @@ class MainWindow:
             lines = vp.get_output()
             self.drawLinesOnCanvas(lines)
             
-            print (lines)
+            for e in lines:
+                print(e)
+            print('--------------------')    
+            #print (lines)
 
     def onClickClear(self):
         self.LOCK_FLAG = False

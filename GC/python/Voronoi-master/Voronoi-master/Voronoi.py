@@ -237,12 +237,12 @@ class Voronoi:
             it = it + 1
             p0 = o.start
             p1 = o.end
-            print (p0.x, p0.y, p1.x, p1.y)
+            print ('{:.1f},{:.1f},{:.1f},{:.1f}'.format(p0.x, p0.y, p1.x, p1.y))
 
     def get_output(self):
         res = []
         for o in self.output:
             p0 = o.start
             p1 = o.end
-            res.append((p0.x, p0.y, p1.x, p1.y))
+            res.append((int(p0.x), int(p0.y), int(p1.x), int(p1.y) ))
         return res
