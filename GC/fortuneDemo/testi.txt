@@ -1,0 +1,58 @@
+heapAdd: (8, 12)
+heapAdd: (16, 9)
+heapAdd: (3, 5)
+pop(8, 12)
+insert
+8
+root
+SiteEvent:  1: x: 8: y: 12
+pop(16, 9)
+insert
+16
+ split node
+left_value: {'break_point': None, 'pointer': None, 'point': (8, 12)}
+parent_value: {'break_point': ((8, 12), (16, 9)), 'hedge': <dcel.Hedge instance at 0xb7636b4c>, 'point': None}
+before left
+(8, 12)
+(8, 12)
+before right
+(16, 9)
+(8, 12)
+right_value2: (16, 9)
+right_value1: (8, 12)
+new_node: (16, 9)
+8
+16
+16
+CIRCLE: a:-129: b: 129
+dx1: 8 dx2: 8 dy1: 3 dy2: -3
+k: 0 h: 8 r: 12.0415945788 h-r: -4.04159457879
+SiteEvent:  2: x: 16: y: 9
+pop(3, 5)
+insert
+3
+375.631854665
+min: 104.368145335
+left:  375.631854665
+min: 104.368145335
+True
+ split node
+left_value: {'break_point': None, 'pointer': None, 'point': (8, 12)}
+parent_value: {'break_point': ((8, 12), (3, 5)), 'hedge': <dcel.Hedge instance at 0x9eb90cc>, 'point': None}
+before left
+(8, 12)
+(8, 12)
+pop LEFT
+before right
+(16, 9)
+(8, 12)
+right_value2: (16, 9)
+right_value1: (8, 12)
+new_node: (3, 5)
+8
+16
+3
+CIRCLE: a:174: b: 129
+dx1: -5 dx2: 8 dy1: 7 dy2: -3
+k: 0 h: 8 r: 7.07106781187 h-r: 0.928932188135
+SiteEvent:  3: x: 3: y: 5
